@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تشفير النص</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background: url('https://png.pngtree.com/background/20220726/original/pngtree-cyber-security-computer-data-encryption-picture-image_1823597.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px;
+            margin: auto;
+            color: black;
+        }
+        .input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        input, textarea, button {
+            width: calc(100% - 20px);
+            margin: 10px 0;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-sizing: border-box;
+        }
+        textarea { height: 100px; resize: none; }
+        button {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #27ae60; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Mohamed Security</h2>
+        <input type="text" id="key" placeholder="أدخل مفتاح التشفير">
+        <button onclick="generateKey()">توليد مفتاح تلقائي</button>
+        <textarea id="text" placeholder="أدخل النص هنا..."></textarea>
+        <button onclick="encryptText()">تشفير</button>
+        <button onclick="decryptText()">فك التشفير</button>
+        <textarea id="output" readonly placeholder="النص المشفر أو المفكوك سيظهر هنا..."></textarea>
+        <button onclick="copyText()">نسخ النص</button>
+    </div>
+
+    <script>
+        function generateKey() {
+            const key = window.crypto.getRandomValues(new Uint8Array(16));
+            document.getElementById("key").value = btoa(String.fromCharCode(...key));
+        }
+        
+        async function encryptText() {
+            const text = document.getElementById("text").value;
+            const key = document.getElementById("key").value;
+            if (!text || !key) { alert("يرجى إدخال النص والمفتاح!"); return; }
+            
+            const encoder = new TextEncoder();
+            const keyData = encoder.encode(key.padEnd(32, " ").slice(0, 32));
+            const cryptoKey = await crypto.subtle.importKey("raw", keyData, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+            
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encryptedData = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cryptoKey, encoder.encode(text));
+            
+            const output = btoa(String.fromCharCode(...new Uint8Array(iv), ...new Uint8Array(encryptedData)));
+            document.getElementById("output").value = output;
+        }
+        
+        async function decryptText() {
+            const encryptedText = document.getElementById("output").value;
+            const key = document.getElementById("key").value;
+            if (!encryptedText || !key) { alert("يرجى إدخال النص المشفر والمفتاح!"); return; }
+            
+            try {
+                const data = Uint8Array.from(atob(encryptedText), c => c.charCodeAt(0));
+                const iv = data.slice(0, 12);
+                const encryptedData = data.slice(12);
+                
+                const encoder = new TextEncoder();
+                const keyData = encoder.encode(key.padEnd(32, " ").slice(0, 32));
+                const cryptoKey = await crypto.subtle.importKey("raw", keyData, { name: "AES-GCM" }, false, ["decrypt"]);
+                
+                const decryptedData = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, encryptedData);
+                document.getElementById("output").value = new TextDecoder().decode(decryptedData);
+            } catch (e) {
+                alert("خطأ في فك التشفير، تحقق من المفتاح والنص المشفر!");
+            }
+        }
+        
+        function copyText() {
+            const output = document.getElementById("output");
+            output.select();
+            document.execCommand("copy");
+            alert("تم النسخ!");
+        }
+    </script>
+</body>
+</html>
